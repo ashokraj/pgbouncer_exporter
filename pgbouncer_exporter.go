@@ -1,14 +1,13 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/common/version"
+	"gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
@@ -36,19 +35,15 @@ func getEnv(key, fallback string) string {
 
 func main() {
 	var (
-		showVersion             = flag.Bool("version", false, "Print version information.")
-		listenAddress           = flag.String("web.listen-address", ":9127", "Address on which to expose metrics and web interface.")
-		connectionStringPointer = flag.String("pgBouncer.connectionString", "postgres://postgres:@localhost:6543/pgbouncer?sslmode=disable",
-			"Connection string for accessing pgBouncer. Can also be set using environment variable DATA_SOURCE_NAME")
-		metricsPath             = flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics.")
+		connectionStringPointer = kingpin.Flag("pgBouncer.connectionString", "Connection string for accessing pgBouncer.").Default("postgres://postgres:@localhost:6543/pgbouncer?sslmode=disable").String()
+		listenAddress           = kingpin.Flag("web.listen-address", "Address on which to expose metrics and web interface.").Default(":9127").String()
+		metricsPath             = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
 	)
 
-	flag.Parse()
-
-	if *showVersion {
-		fmt.Fprintln(os.Stdout, version.Print("pgbouncer_exporter"))
-		os.Exit(0)
-	}
+	log.AddFlags(kingpin.CommandLine)
+	kingpin.Version(version.Print("pgbouncer_exporter"))
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
 
 	connectionString := getEnv("DATA_SOURCE_NAME", *connectionStringPointer)
 	exporter := NewExporter(connectionString, namespace)
